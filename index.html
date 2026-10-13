@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>IdiotBox™</title>
+
+    <!-- Ethers.js -->
+    <script src="https://cdn.jsdelivr.net/npm/ethers@6.13.5/dist/ethers.umd.min.js"></script>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin: 0;
+            padding-top: 50px;
+            background: #f4f4f4;
+        }
+
+        h1 {
+            margin-bottom: 30px;
+        }
+
+        #controllerBox {
+            background: white;
+            width: 300px;
+            margin: 0 auto 30px auto;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        }
+
+        #controllerLabel {
+            font-size: 18px;
+            margin-bottom: 10px;
+        }
+
+        #blockchainLabel {
+            margin-top: 10px;
+            font-size: 14px;
+            color: #666;
+        }
+
+        button {
+            display: block;
+            width: 250px;
+            padding: 20px;
+            margin: 20px auto;
+            font-size: 24px;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+        }
+
+        #lockButton {
+            background: #4CAF50;
+            color: white;
+        }
+
+        #unlockButton {
+            background: #f44336;
+            color: white;
+        }
+
+        #resetButton {
+            background: #2196F3;
+            color: white;
+            font-size: 16px;
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        #status {
+            margin-top: 30px;
+            font-size: 18px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h1>IdiotBox™</h1>
+
+    <div id="controllerBox">
+        <div id="controllerLabel">IdiotBox Controller</div>
+
+        <div id="blockchainLabel">
+            Blockchain Command Control
+        </div>
+    </div>
+
+    <button id="lockButton" onclick="sendLock()">
+        LOCK
+    </button>
+
+    <button id="unlockButton" onclick="sendUnlock()">
+        UNLOCK
+    </button>
+
+    <button id="resetButton" onclick="sendReset()">
+        RESET_IDIOTBOX_WIFI
+    </button>
+
+    <div id="status">
+        Ready.
+    </div>
+
+
+    <script>
+
+        // ======================================================
+        // IDIOTBOX SMART CONTRACT
+        // ======================================================
+
+        const contractAddress =
+            "0xDe735cD192BACCaBEb3482B16892AEB779d246c9";
+
+        const contractABI = [
+            "function lock() public",
+            "function unlock() public",
+            "function resetIdiotBoxWiFi() public"
+        ];
+
+
+        // ======================================================
+        // STATUS
+        // ======================================================
+
+        function updateStatus(message) {
+            document.getElementById("status").innerText = message;
+        }
+
+
+        // ======================================================
+        // GET CONTRACT
+        // ======================================================
+
+        async function getContract() {
+
+            if (!window.ethereum) {
+                alert("MetaMask is not installed.");
+                throw new Error("MetaMask is not installed.");
+            }
+
+            updateStatus("🦊 Opening MetaMask...");
+
+            const provider =
+                new ethers.BrowserProvider(window.ethereum);
+
+            await provider.send(
+                "eth_requestAccounts",
+                []
+            );
+
+            const network =
+                await provider.getNetwork();
+
+            if (network.chainId !== 11155111n) {
+
+                updateStatus(
+                    "🔴 Switch MetaMask to Sepolia."
+                );
+
+                alert(
+                    "Please switch MetaMask to the Sepolia Testnet."
+                );
+
+                throw new Error("Wrong network. Switch to Sepolia.");
+            }
+
+            const signer =
+                await provider.getSigner();
+
+            return new ethers.Contract(
+                contractAddress,
+                contractABI,
+                signer
+            );
+        }
+
+
+        // ======================================================
+        // LOCK
+        // ======================================================
+
+        async function sendLock() {
+
+            try {
+
+                const contract =
+                    await getContract();
+
+                updateStatus(
+                    "🦊 Approve LOCK in MetaMask..."
+                );
+
+                const transaction =
+                    await contract.lock();
+
+                console.log(
+                    "LOCK transaction:",
+                    transaction.hash
+                );
+
+                updateStatus(
+                    "⛓️ Waiting for blockchain confirmation..."
+                );
+
+                await transaction.wait();
+
+                updateStatus(
+                    "✅ LOCK confirmed on Sepolia"
+                );
+
+            } catch (error) {
+
+                console.error(
+                    "LOCK error:",
+                    error
+                );
+
+                if (
+                    error.code === 4001 ||
+                    error.code === "ACTION_REJECTED"
+                ) {
+                    updateStatus("❌ Transaction cancelled");
+                } else {
+                    updateStatus("❌ LOCK transaction failed");
+                }
+            }
+        }
+
+
+        // ======================================================
+        // UNLOCK
+        // ======================================================
+
+        async function sendUnlock() {
+
+            try {
+
+                const contract =
+                    await getContract();
+
+                updateStatus(
+                    "🦊 Approve UNLOCK in MetaMask..."
+                );
+
+                const transaction =
+                    await contract.unlock();
+
+                console.log(
+                    "UNLOCK transaction:",
+                    transaction.hash
+                );
+
+                updateStatus(
+                    "⛓️ Waiting for blockchain confirmation..."
+                );
+
+                await transaction.wait();
+
+                updateStatus(
+                    "✅ UNLOCK confirmed on Sepolia"
+                );
+
+            } catch (error) {
+
+                console.error(
+                    "UNLOCK error:",
+                    error
+                );
+
+                if (
+                    error.code === 4001 ||
+                    error.code === "ACTION_REJECTED"
+                ) {
+                    updateStatus("❌ Transaction cancelled");
+                } else {
+                    updateStatus("❌ UNLOCK transaction failed");
+                }
+            }
+        }
+
+
+        // ======================================================
+        // RESET IDIOTBOX WIFI
+        // ======================================================
+
+        async function sendReset() {
+
+            const confirmed = confirm(
+                "RESET_IDIOTBOX_WIFI will erase the ESP32's saved Wi-Fi credentials and restart the IdiotBox.\n\nContinue?"
+            );
+
+            if (!confirmed) {
+
+                updateStatus("Reset cancelled.");
+
+                return;
+            }
+
+            try {
+
+                const contract =
+                    await getContract();
+
+                updateStatus(
+                    "🦊 Approve RESET_IDIOTBOX_WIFI in MetaMask..."
+                );
+
+                const transaction =
+                    await contract.resetIdiotBoxWiFi();
+
+                console.log(
+                    "RESET_IDIOTBOX_WIFI transaction:",
+                    transaction.hash
+                );
+
+                updateStatus(
+                    "⛓️ Waiting for blockchain confirmation..."
+                );
+
+                await transaction.wait();
+
+                updateStatus(
+                    "✅ RESET_IDIOTBOX_WIFI confirmed on Sepolia"
+                );
+
+            } catch (error) {
+
+                console.error(
+                    "RESET_IDIOTBOX_WIFI error:",
+                    error
+                );
+
+                if (
+                    error.code === 4001 ||
+                    error.code === "ACTION_REJECTED"
+                ) {
+                    updateStatus("❌ Transaction cancelled");
+                } else {
+                    updateStatus(
+                        "❌ RESET_IDIOTBOX_WIFI transaction failed"
+                    );
+                }
+            }
+        }
+
+    </script>
+
+</body>
+</html>
